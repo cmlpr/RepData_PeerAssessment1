@@ -71,7 +71,7 @@ Maximum average activity happened in interval `r maxActivty$interval` and it was
 numMissing <- length(data[is.na(data$steps),]$steps)
 dailyAvgSteps <- ddply(data, c("date"), mutate, avgSteps = ave(steps, na.rm = TRUE, FUN=mean))
 dailyAvgSteps[is.na(dailyAvgSteps$avgSteps),]$avgSteps <- 0.0
-head(dailyAvgSteps,500)
+#head(dailyAvgSteps,500)
 dataNew <- data
 dataNew$steps <- as.numeric(dataNew$steps)
 for (i in 1:length(dataNew$steps)) {
@@ -80,7 +80,7 @@ for (i in 1:length(dataNew$steps)) {
     }
 }
 
-head(data,500)
+#head(data,500)
 
 newdailySteps <- ddply(dataNew, c("date"), summarise, totSteps = sum(steps))
 head(newdailySteps)
@@ -98,7 +98,7 @@ weekdata <- ddply(data, c("date"), mutate,
 weekdata$week <- as.factor(weekdata$week)
 
 weekPattern <- ddply(weekdata, c("interval", "week"), summarise, avgSteps = mean(steps, na.rm = TRUE))
-head(weekPattern,1000)
+#head(weekPattern,1000)
 library(lattice)
 xyplot(weekPattern$avgSteps ~ weekPattern$interval | weekPattern$week, 
         layout = c(1,2), xlab = "Interval", ylab = "Number of steps", type = "l")
