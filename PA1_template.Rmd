@@ -8,18 +8,100 @@ output:
 
 ## Loading and preprocessing the data
 
+### The process is as follows:
+
+* Set working directory
+
+* Unzip activity.zip
+
+```{r prelim, echo = TRUE, result = "hide"}
+getwd()
+setwd("~/Documents/Repos/Coursera/RepData_PeerAssessment1/")
+list.files()
+unzip("./activity.zip", exdir = "./")
+list.files()
+```
+
+
+* Read csv file
+
+```{r readData, echo = TRUE, result = "asis"}
+data <- read.csv(file = "./activity.csv", header = TRUE)
+head(data)
+str(data)
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r MTSPD, echo = TRUE, result = "asis"}
+library(plyr)
+dailySteps <- ddply(data, c("date"), summarise, totSteps = sum(steps, na.rm = TRUE))
+head(dailySteps)
+hist(x = dailySteps$totSteps, xlab = "Total Steps per Day", main = "Historgram of Daily Total Steps")
+meanSteps <- format(x = mean(dailySteps$totSteps), digits = 6)
+medianSteps <- median(dailySteps$totSteps)
+```
 
+The mean of the total daily steps is `r meanSteps` and the median is `r medianSteps`.
 
 ## What is the average daily activity pattern?
 
+```{r ADAP, echo = TRUE, result = "asis", fig.width=7}
+actPattern <- ddply(data, c("interval"), summarise, avgSteps = mean(steps, na.rm = TRUE))
+head(actPattern)
+maxActivty <- actPattern[actPattern$avgSteps == max(actPattern$avgSteps), ]
+plot(actPattern$interval, actPattern$avgSteps, 
+     xlab = "Time of Day (h)", 
+     ylab = "Avg # of Steps Taken Across All Days", 
+     type = "l",
+     axes = FALSE)
+axis(side = 1, at = seq(from = 0, to = 2400, by = 200), labels = formatC(seq(0, 24, 2)))
+axis(side = 2)
+box()
+```
 
+Maximum average activity happened in interval `r maxActivty$interval` and it was `r maxActivty$avgSteps`.
 
 ## Imputing missing values
 
+```{r missingValue, echo = TRUE, result = "asis"}
 
+???????????????????????
+numMissing <- length(data[is.na(data$steps),]$steps)
+dailyAvgSteps <- ddply(data, c("date"), mutate, avgSteps = ave(steps, na.rm = TRUE, FUN=mean))
+dailyAvgSteps[is.na(dailyAvgSteps$avgSteps),]$avgSteps <- 0.0
+head(dailyAvgSteps,500)
+dataNew <- data
+dataNew$steps <- as.numeric(dataNew$steps)
+for (i in 1:length(dataNew$steps)) {
+    if (is.na(dataNew[i,]$steps)) {
+        dataNew[i,]$steps <- as.numeric(dailyAvgSteps[i,]$avgSteps)
+    }
+}
+
+head(data,500)
+
+newdailySteps <- ddply(dataNew, c("date"), summarise, totSteps = sum(steps))
+head(newdailySteps)
+hist(x = newdailySteps$totSteps, xlab = "Total Steps per Day", main = "Historgram of Daily Total Steps")
+newmeanSteps <- format(x = mean(newdailySteps$totSteps), digits = 6)
+newmedianSteps <- median(newdailySteps$totSteps)
+
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r weekend, echo = TRUE, result = "asis", fig.width = 6}
+weekdata <- ddply(data, c("date"), mutate,
+            week = ifelse((weekdays(as.POSIXlt(date)) == "Saturday" | weekdays(as.POSIXlt(date)) == "Sunday"), "weekend", "weekday"))
+
+weekdata$week <- as.factor(weekdata$week)
+
+weekPattern <- ddply(weekdata, c("interval", "week"), summarise, avgSteps = mean(steps, na.rm = TRUE))
+head(weekPattern,1000)
+library(lattice)
+xyplot(weekPattern$avgSteps ~ weekPattern$interval | weekPattern$week, 
+        layout = c(1,2), xlab = "Interval", ylab = "Number of steps", type = "l")
+
+```
+
