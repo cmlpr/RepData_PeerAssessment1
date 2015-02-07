@@ -5,9 +5,9 @@
 
 ### The process is as follows:
 
-* Set working directory
+* Set working directory with setwd() command
 
-* Unzip activity.zip
+* Unzip activity.zip into the same folder using unzip() command
 
 
 ```r
@@ -41,7 +41,9 @@ list.files()
 ```
 
 
-* Read csv file
+* Now we have the CSV file in the folder, we can read it with its headers with read.csv().
+
+* Content of the CSV file is in a data frame called "data". Let's look at the initial rows of data using head() command and call str() function to get and idea of the columns and their type
 
 
 ```r
@@ -71,23 +73,35 @@ str(data)
 ```
 
 
-## What is mean total number of steps taken per day?
+## Q1: What is mean total number of steps taken per day?
+
+* Let's first generate a new data frame after removing the NA values using na.omit() function
+
+* Plyr package is very handy when we are interested in data reduction
+
+* I can get the total number of steps taken per day with ddply() function. Here I apply the summarize function to sum up all the steps at each day. While doing so, I also create a new variable called totSteps. Finally I assign the result to a new data frame called dailySteps.
+
+* Plot the histogram of the total steps taken each day with hist() command. Add x axis text and title
+
+* The last step of this part is to calculate the mean and median of the data. I assign the results to variables so that I can use them in the text below. 
+
 
 
 ```r
+data2 <- na.omit(data)
 library(plyr)
-dailySteps <- ddply(data, c("date"), summarise, totSteps = sum(steps, na.rm = TRUE))
+dailySteps <- ddply(data2, c("date"), summarise, totSteps = sum(steps, na.rm = TRUE))
 head(dailySteps)
 ```
 
 ```
 ##         date totSteps
-## 1 2012-10-01        0
-## 2 2012-10-02      126
-## 3 2012-10-03    11352
-## 4 2012-10-04    12116
-## 5 2012-10-05    13294
-## 6 2012-10-06    15420
+## 1 2012-10-02      126
+## 2 2012-10-03    11352
+## 3 2012-10-04    12116
+## 4 2012-10-05    13294
+## 5 2012-10-06    15420
+## 6 2012-10-07    11015
 ```
 
 ```r
@@ -101,13 +115,21 @@ meanSteps <- format(x = mean(dailySteps$totSteps), digits = 6)
 medianSteps <- median(dailySteps$totSteps)
 ```
 
-The mean of the total daily steps is 9354.23 and the median is 10395.
+The mean of the total daily steps is 10766.2 and the median is 10765.
 
-## What is the average daily activity pattern?
+## Q2: What is the average daily activity pattern?
+
+* Now we need to avarage the steps taken across all days in the dat for each interval. We can use ddply again. Now we apply summarise on interval column and generate a new variable called avgSteps with mean steps information. We assign the result to actPattern data frame.
+
+* we assign the maxActivity result to maxActivity variable. 
+
+* Plot interval vs avgSteps with type "l". Convert the x-axis to 24Hr format
+
+* Finally below the code chunk we print the maxActivity interval and the avg steps in that interval. 
 
 
 ```r
-actPattern <- ddply(data, c("interval"), summarise, avgSteps = mean(steps, na.rm = TRUE))
+actPattern <- ddply(data2, c("interval"), summarise, avgSteps = mean(steps, na.rm = TRUE))
 head(actPattern)
 ```
 
@@ -137,32 +159,26 @@ box()
 
 Maximum average activity happened in interval 835 and it was 206.1698113.
 
-## Imputing missing values
+## Q3: Imputing missing values
+
+* We can check the missing values with is.na(). If I use is.na() to get the subset of a dataframe, I can then get the size/length of this resulting data frame to get te number of missing values 
+
+* I decided to use the averages calculated for each interval for the missing values. Created a new data frame called dataNew from original data frame "data". Looped through each row and replace the rows that has NA step count with the avarage taken from the corresponsing interval in actPattern data set.
+
+* Now I can calculate the daily total steps, plot histogram and compute the mean&median again as described in Q1.
 
 
 ```r
-???????????????????????
 numMissing <- length(data[is.na(data$steps),]$steps)
-```
-
-```
-## Contacting Delphi...the oracle is unavailable.
-## We apologize for any inconvenience.
-```
-
-```r
-dailyAvgSteps <- ddply(data, c("date"), mutate, avgSteps = ave(steps, na.rm = TRUE, FUN=mean))
-dailyAvgSteps[is.na(dailyAvgSteps$avgSteps),]$avgSteps <- 0.0
-#head(dailyAvgSteps,500)
+#dailyAvgSteps <- ddply(data2, c("interval"), mutate, avgSteps = ave(steps, na.rm = FALSE, FUN=mean))
+#dailyAvgSteps[is.na(dailyAvgSteps$avgSteps),]$avgSteps <- 0.0
 dataNew <- data
 dataNew$steps <- as.numeric(dataNew$steps)
 for (i in 1:length(dataNew$steps)) {
     if (is.na(dataNew[i,]$steps)) {
-        dataNew[i,]$steps <- as.numeric(dailyAvgSteps[i,]$avgSteps)
+        dataNew[i,]$steps <- actPattern[actPattern$interval == dataNew[i,]$interval,]$avgSteps
     }
 }
-
-#head(data,500)
 
 newdailySteps <- ddply(dataNew, c("date"), summarise, totSteps = sum(steps))
 head(newdailySteps)
@@ -170,12 +186,12 @@ head(newdailySteps)
 
 ```
 ##         date totSteps
-## 1 2012-10-01        0
-## 2 2012-10-02      126
-## 3 2012-10-03    11352
-## 4 2012-10-04    12116
-## 5 2012-10-05    13294
-## 6 2012-10-06    15420
+## 1 2012-10-01 10766.19
+## 2 2012-10-02   126.00
+## 3 2012-10-03 11352.00
+## 4 2012-10-04 12116.00
+## 5 2012-10-05 13294.00
+## 6 2012-10-06 15420.00
 ```
 
 ```r
@@ -186,10 +202,19 @@ hist(x = newdailySteps$totSteps, xlab = "Total Steps per Day", main = "Historgra
 
 ```r
 newmeanSteps <- format(x = mean(newdailySteps$totSteps), digits = 6)
-newmedianSteps <- median(newdailySteps$totSteps)
+newmedianSteps <- format(x = median(newdailySteps$totSteps), digits = 6)
 ```
 
-## Are there differences in activity patterns between weekdays and weekends?
+The total number of missing values in the dataset is 2304. The new mean of the total daily steps is 10766.2 and the new median is 10766.2. The mean did not change because we used the mean value but median is now equal to mean number. 
+
+## Q4: Are there differences in activity patterns between weekdays and weekends?
+
+* I applied ddply and created a new variable called week which would take weekend or weekday values based on the ifelse check on each value of the date row. We need to convert the date to POSIXlt and then we can use weekdays function to check if the date correspond to Staurday or Sunday.
+
+* Then we can convert the column to Factor and  calculate the mean steps.
+
+* Next phase is to use lattice plot and plot activity during weekdays and weekends.
+
 
 ```r
 weekdata <- ddply(data, c("date"), mutate,
